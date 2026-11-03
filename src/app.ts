@@ -16,7 +16,7 @@ export type AppDeps = {
     fetch?: typeof fetch;
 };
 
-export const LOGIN_PATH = "/auth/discord/login";
+export const LOGIN_PATH = "/auth/start";
 
 export function createApp(deps: AppDeps): Hono {
     const app = new Hono();
