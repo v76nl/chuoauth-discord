@@ -66,15 +66,13 @@ describe("exchangeCode", () => {
     });
 
     it("guilds.join が許可されていなければエラー", async () => {
-        const fetchMock = vi
-            .fn<typeof fetch>()
-            .mockResolvedValueOnce(
-                json({
-                    access_token: "at",
-                    token_type: "Bearer",
-                    scope: "identify"
-                })
-            );
+        const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+            json({
+                access_token: "at",
+                token_type: "Bearer",
+                scope: "identify"
+            })
+        );
         await expect(exchangeCode(options, "code", fetchMock)).rejects.toThrow(
             "scopes"
         );
