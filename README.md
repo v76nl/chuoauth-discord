@@ -14,20 +14,24 @@ chuoauthのJWTを検証し、Discordサーバーで中央大学の学生に認�
 
 ## 1. 概要
 
-利用者はDiscordアカウントを連携した後、[chuoauth](https://github.com/v76nl/chuoauth) で大学のGoogleアカウントにログインする。
-chuoauth-discordは返ってきたJWTをchuoauthの公開鍵で検証し、Botが対象サーバーの認証済みロールを付与する。
+新規ユーザーには公開URL (`/`) を配る。
+利用者はまず [chuoauth](https://github.com/v76nl/chuoauth) で大学のGoogleアカウントにログインし、その後Discordアカウントを連携する。
+chuoauth-discordはJWTをchuoauthの公開鍵で検証し、Botが利用者を対象サーバーに参加させて認証済みロールを付与する。
+Discordの招待リンクを公開しなくても、このURLが学生専用の入口になる。
 Googleとは直接通信せず、Discord API操作、JWT検証、ユーザーの紐付け管理のみを担う
 
 ```text
-利用者 ── /auth/discord/login ──> Discord認可 (identify, guilds.join)
-                                       │
-       <── /auth/discord/callback ─────┘  DiscordユーザーIDを暗号化Cookieに保持
-       ── chuoauth /auth/google/login ──> 大学Googleアカウントでログイン
-                                       │
-       <── /auth/chuoauth/callback?token=<JWT>
-            JWKSで署名検証 → 重複検査 → DB記録 → ロール付与 → 完了画面
+利用者 ── /auth/start ──> chuoauth /auth/google/login ──> 大学Googleアカウントでログイン
+                                                              │
+       <── /auth/chuoauth/callback?token=<JWT> ───────────────┘
+            JWKSで署名検証 → 大学アカウントの重複検査 → 暗号化Cookieに保持
+       ── Discord認可 (identify, guilds.join)
+                                                              │
+       <── /auth/discord/callback ────────────────────────────┘
+            Discordアカウントの重複検査 → DB記録 → サーバー参加・ロール付与 → 完了画面
 ```
 
+学生以外はDiscord連携の前に拒否される。
 同じ大学アカウントで複数のDiscordアカウントを認証すること、同じDiscordアカウントで複数回認証することはできない
 
 ## 2. 仕組み
@@ -148,13 +152,13 @@ docker run --env-file .env -p 4000:4000 -v chuoauth-discord-data:/app/data chuoa
 
 ## 6. エンドポイントとBotコマンド
 
-| メソッド | パス                      | 説明                                                      |
-| -------- | ------------------------- | --------------------------------------------------------- |
-| GET      | `/`                       | 認証開始ページ                                            |
-| GET      | `/auth/discord/login`     | Discord認可画面へリダイレクト                             |
-| GET      | `/auth/discord/callback`  | Discordからの戻り先。chuoauthのログインへリダイレクト     |
-| GET      | `/auth/chuoauth/callback` | chuoauthからの戻り先。JWT検証、ロール付与、完了画面の表示 |
-| GET      | `/health`                 | `{"status":"ok"}`                                         |
+| メソッド | パス                      | 説明                                                           |
+| -------- | ------------------------- | -------------------------------------------------------------- |
+| GET      | `/`                       | 認証開始ページ (新規ユーザーに配るURL)                         |
+| GET      | `/auth/start`             | chuoauthのログインへリダイレクト                               |
+| GET      | `/auth/chuoauth/callback` | chuoauthからの戻り先。JWT検証後、Discord認可画面へリダイレクト |
+| GET      | `/auth/discord/callback`  | Discordからの戻り先。サーバー参加、ロール付与、完了画面の表示  |
+| GET      | `/health`                 | `{"status":"ok"}`                                              |
 
 | コマンド・操作                     | 説明                                                   |
 | ---------------------------------- | ------------------------------------------------------ |
@@ -174,8 +178,9 @@ docker run --env-file .env -p 4000:4000 -v chuoauth-discord-data:/app/data chuoa
 
 ## 7. セキュリティ設計
 
-- DiscordユーザーIDとアクセストークンは、`SESSION_SECRET` で暗号化 (A256GCM) したHttpOnly Cookieに保持し、改ざんや盗み見を防ぐ。有効期限は10分
-- Discord認可とchuoauth認証のそれぞれでstateを照合し、他人のJWTやDiscordアカウントを差し込まれるのを防ぐ
+- 検証済みの大学アカウント情報は、`SESSION_SECRET` で暗号化 (A256GCM) したHttpOnly Cookieに保持し、改ざんや盗み見を防ぐ。有効期限は10分
+- Discordのアクセストークンは受け取ったリクエスト内でサーバー参加に使うだけで、Cookieにも DB にも保存しない
+- chuoauth認証とDiscord認可のそれぞれでstateを照合し、他人のJWTやDiscordアカウントを差し込まれるのを防ぐ
 - JWTは `iss`、`exp`、RS256署名、`domain` を検証する。公開鍵は jose がキャッシュし、未知の `kid` が来たときだけ再取得する
 - 先にDBへ記録して UNIQUE 制約で同時リクエストによる二重登録を防ぎ、ロール付与に失敗した場合は記録を取り消して再試行できるようにしている
 - アクセスログにはクエリ文字列 (認可コードやJWT) を出力しない

@@ -2,18 +2,19 @@ import { createHash, randomBytes } from "node:crypto";
 import { EncryptJWT, jwtDecrypt } from "jose";
 import { z } from "zod";
 
-// Discord認可の開始からコールバックまでのCSRF対策値
-export const oauthStateSchema = z.object({
-    discord_state: z.string()
+// 認証開始からchuoauthコールバックまでのCSRF対策値
+export const startStateSchema = z.object({
+    chuoauth_state: z.string()
 });
 
-// Discord認可後からchuoauthコールバックまで保持する情報。
-// guilds.join で利用者をサーバーに追加するため、アクセストークンも暗号化して保持する
+// 大学アカウントの検証後からDiscordコールバックまで保持する情報。
+// 学籍番号やメールアドレスを含むため、署名だけでなく暗号化して保持する
 export const linkSessionSchema = z.object({
-    discord_user_id: z.string(),
-    discord_username: z.string(),
-    discord_access_token: z.string(),
-    chuoauth_state: z.string()
+    google_sub: z.string(),
+    email: z.string(),
+    domain: z.string(),
+    student_id: z.string().nullable(),
+    discord_state: z.string()
 });
 
 export type LinkSession = z.infer<typeof linkSessionSchema>;
@@ -29,7 +30,7 @@ function deriveKey(secret: string): Uint8Array {
 }
 
 export async function seal(
-    data: Record<string, string>,
+    data: Record<string, string | null>,
     secret: string
 ): Promise<string> {
     return new EncryptJWT(data)

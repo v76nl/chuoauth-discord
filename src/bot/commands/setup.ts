@@ -77,7 +77,7 @@ export async function handleVerifyButton(
         .setURL(deps.loginUrl);
     await interaction.reply({
         content:
-            "下のボタンから認証ページを開いてください。Discordの連携後、大学のGoogleアカウントでログインします",
+            "下のボタンから認証ページを開いてください。大学のGoogleアカウントでログインしたあと、Discordアカウントを連携します",
         components: [new ActionRowBuilder<ButtonBuilder>().addComponents(link)],
         flags: MessageFlags.Ephemeral
     });

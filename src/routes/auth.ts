@@ -11,17 +11,17 @@ import {
 import { ChuoauthTokenError } from "../services/jwt.js";
 import {
     linkSessionSchema,
-    oauthStateSchema,
     randomToken,
     seal,
     SESSION_TTL_SECONDS,
+    startStateSchema,
     unseal
 } from "../services/session.js";
 import { completeVerification } from "../services/verification.js";
 import type { VerificationFailureReason } from "../types/index.js";
 import type { ErrorKind, Views } from "./views.js";
 
-const OAUTH_COOKIE = "cad_oauth";
+const START_COOKIE = "cad_start";
 const SESSION_COOKIE = "cad_session";
 const COOKIE_PATH = "/auth";
 
@@ -42,7 +42,7 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
     };
     const app = new Hono();
 
-    // Discord・chuoauthからのトップレベル遷移でも送られるよう SameSite=Lax にする
+    // chuoauth・Discordからのトップレベル遷移でも送られるよう SameSite=Lax にする
     const writeCookie = (c: Context, name: string, value: string) =>
         setCookie(c, name, value, {
             path: COOKIE_PATH,
@@ -59,73 +59,28 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
     const fail = (c: Context, kind: ErrorKind, status: ContentfulStatusCode) =>
         c.html(views.error(kind), status);
 
-    app.get("/discord/login", async (c) => {
+    // 学生以外をDiscord連携の前に弾くため、大学アカウント認証から始める
+    app.get("/start", async (c) => {
         const state = randomToken();
         writeCookie(
             c,
-            OAUTH_COOKIE,
-            await seal({ discord_state: state }, config.sessionSecret)
-        );
-        return c.redirect(buildAuthorizeUrl(discordOptions, state), 302);
-    });
-
-    app.get("/discord/callback", async (c) => {
-        const oauth = await unseal(
-            takeCookie(c, OAUTH_COOKIE),
-            config.sessionSecret,
-            oauthStateSchema
-        );
-        const { code, state, error } = c.req.query();
-        if (!oauth || state !== oauth.discord_state) {
-            return fail(c, "invalid_session", 400);
-        }
-        if (error || !code) {
-            return fail(c, "discord_denied", 403);
-        }
-
-        let discord;
-        try {
-            discord = await exchangeCode(discordOptions, code, deps.fetch);
-        } catch (err) {
-            if (err instanceof DiscordOAuthError) {
-                console.warn(err.message);
-                return fail(c, "discord_failed", 502);
-            }
-            throw err;
-        }
-        // Google認証まで進ませる前に、認証済みのDiscordアカウントを弾く
-        if (deps.repo.findByDiscordUserId(discord.user.id)) {
-            return fail(c, "discord_already_verified", 409);
-        }
-
-        const chuoauthState = randomToken();
-        writeCookie(
-            c,
-            SESSION_COOKIE,
-            await seal(
-                {
-                    discord_user_id: discord.user.id,
-                    discord_username: discord.user.username,
-                    discord_access_token: discord.accessToken,
-                    chuoauth_state: chuoauthState
-                },
-                config.sessionSecret
-            )
+            START_COOKIE,
+            await seal({ chuoauth_state: state }, config.sessionSecret)
         );
         const login = new URL(`${config.chuoauth.baseUrl}/auth/google/login`);
         login.searchParams.set("redirect_uri", config.chuoauth.redirectUri);
-        login.searchParams.set("state", chuoauthState);
+        login.searchParams.set("state", state);
         return c.redirect(login.toString(), 302);
     });
 
     app.get("/chuoauth/callback", async (c) => {
-        const session = await unseal(
-            takeCookie(c, SESSION_COOKIE),
+        const start = await unseal(
+            takeCookie(c, START_COOKIE),
             config.sessionSecret,
-            linkSessionSchema
+            startStateSchema
         );
         const { token, state, error } = c.req.query();
-        if (!session || state !== session.chuoauth_state) {
+        if (!start || state !== start.chuoauth_state) {
             return fail(c, "invalid_session", 400);
         }
         if (error || !token) {
@@ -142,6 +97,53 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
             }
             throw err;
         }
+        // Discord連携へ進ませる前に、使用済みの大学アカウントを弾く
+        if (deps.repo.findByGoogleSub(claims.sub)) {
+            return fail(c, "google_account_already_used", 409);
+        }
+
+        const discordState = randomToken();
+        writeCookie(
+            c,
+            SESSION_COOKIE,
+            await seal(
+                {
+                    google_sub: claims.sub,
+                    email: claims.email,
+                    domain: claims.domain,
+                    student_id: claims.student_id,
+                    discord_state: discordState
+                },
+                config.sessionSecret
+            )
+        );
+        return c.redirect(buildAuthorizeUrl(discordOptions, discordState), 302);
+    });
+
+    app.get("/discord/callback", async (c) => {
+        const session = await unseal(
+            takeCookie(c, SESSION_COOKIE),
+            config.sessionSecret,
+            linkSessionSchema
+        );
+        const { code, state, error } = c.req.query();
+        if (!session || state !== session.discord_state) {
+            return fail(c, "invalid_session", 400);
+        }
+        if (error || !code) {
+            return fail(c, "discord_denied", 403);
+        }
+
+        let discord;
+        try {
+            discord = await exchangeCode(discordOptions, code, deps.fetch);
+        } catch (err) {
+            if (err instanceof DiscordOAuthError) {
+                console.warn(err.message);
+                return fail(c, "discord_failed", 502);
+            }
+            throw err;
+        }
 
         const result = await completeVerification(
             {
@@ -152,9 +154,14 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
                 changeNickname: config.changeNicknameToStudentId
             },
             {
-                discordUserId: session.discord_user_id,
-                discordAccessToken: session.discord_access_token,
-                claims
+                discordUserId: discord.user.id,
+                discordAccessToken: discord.accessToken,
+                claims: {
+                    sub: session.google_sub,
+                    email: session.email,
+                    domain: session.domain,
+                    student_id: session.student_id
+                }
             }
         );
         if (!result.ok) {
@@ -162,8 +169,8 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
         }
         return c.html(
             views.success({
-                discordUsername: session.discord_username,
-                email: claims.email,
+                discordUsername: discord.user.username,
+                email: session.email,
                 nicknameUpdated: result.nicknameUpdated
             })
         );

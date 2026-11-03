@@ -166,7 +166,7 @@ export function createViews(options: { isDev: boolean; loginPath: string }) {
                 "大学アカウント認証",
                 html`<h1>大学アカウント認証</h1>
                     <p>
-                        Discordアカウントと中央大学のGoogleアカウントを連携し、サーバーの認証済みロールを受け取ります
+                        中央大学のGoogleアカウントで認証したあとDiscordアカウントを連携すると、サーバーに参加して認証済みロールを受け取れます
                     </p>
                     <a
                         class="button"
