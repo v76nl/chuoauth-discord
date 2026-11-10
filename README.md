@@ -58,7 +58,7 @@ chuoauth-discord/
 │   │   ├── commands/
 │   │   │   └── setup.ts         - /setup-verify と認証ボタン
 │   │   └── services/
-│   │       └── member.ts        - ギルド追加、ロール付与、ニックネーム変更
+│   │       └── member.ts        - ギルド追加、ロール付与
 │   ├── db/
 │   │   ├── schema.ts            - verified_users のDDLと型
 │   │   └── client.ts            - SQLite接続、クエリ関数
@@ -93,9 +93,9 @@ chuoauth-discord/
 
 1. アプリケーションを作成し、OAuth2 の Redirects に `DISCORD_REDIRECT_URI` と同じ値を登録する
 2. Bot を作成してトークンを `DISCORD_BOT_TOKEN` に設定する。Privileged Gateway Intents の **Server Members Intent** を有効にする
-3. 次のURLでBotをサーバーに招待する (`<CLIENT_ID>` を置き換える)。権限は「ロールの管理」「ニックネームの管理」「招待を作成」
+3. 次のURLでBotをサーバーに招待する (`<CLIENT_ID>` を置き換える)。権限は「ロールの管理」「招待を作成」
     ```text
-    https://discord.com/oauth2/authorize?client_id=<CLIENT_ID>&scope=bot+applications.commands&permissions=402653185
+    https://discord.com/oauth2/authorize?client_id=<CLIENT_ID>&scope=bot+applications.commands&permissions=268435457
     ```
 4. サーバー設定のロール一覧で、**Botのロールを認証済みロールより上に配置する** (下にあるとロールを付与できない)
 
@@ -107,25 +107,24 @@ chuoauthの `ALLOWED_REDIRECT_URIS` に `CHUOAUTH_REDIRECT_URI` (例: `http://lo
 
 `.env.example` を `.env` にコピーして設定する
 
-| 変数                            | 必須 | 説明                                                             |
-| ------------------------------- | ---- | ---------------------------------------------------------------- |
-| `PORT`                          |      | 待受ポート (既定: 4000)                                          |
-| `APP_BASE_URL`                  | 必須 | 公開URL。`https:` の場合はCookieに Secure 属性を付与             |
-| `SESSION_SECRET`                | 必須 | 連携中のCookieを暗号化するキー (32文字以上)                      |
-| `DATABASE_PATH`                 |      | SQLiteファイルのパス (既定: `data/chuoauth-discord.db`)          |
-| `DISCORD_CLIENT_ID`             | 必須 | アプリケーションID                                               |
-| `DISCORD_CLIENT_SECRET`         | 必須 |                                                                  |
-| `DISCORD_BOT_TOKEN`             | 必須 |                                                                  |
-| `DISCORD_GUILD_ID`              | 必須 | 対象サーバーのID                                                 |
-| `DISCORD_VERIFIED_ROLE_ID`      | 必須 | 付与するロールのID                                               |
-| `DISCORD_REDIRECT_URI`          | 必須 | `/auth/discord/callback` の完全なURL                             |
-| `CHUOAUTH_BASE_URL`             | 必須 | chuoauthのURL                                                    |
-| `CHUOAUTH_ISSUER`               |      | JWTの `iss` と照合する値 (既定: `CHUOAUTH_BASE_URL`)             |
-| `CHUOAUTH_JWKS_URL`             |      | 公開鍵の取得先 (既定: `CHUOAUTH_BASE_URL/.well-known/jwks.json`) |
-| `CHUOAUTH_REDIRECT_URI`         | 必須 | `/auth/chuoauth/callback` の完全なURL                            |
-| `CHUOAUTH_AUDIENCE`             |      | chuoauthで `TOKEN_AUDIENCE` を設定した場合に同じ値を設定         |
-| `ALLOWED_DOMAIN`                |      | 許可する大学ドメイン (既定: `g.chuo-u.ac.jp`)                    |
-| `CHANGE_NICKNAME_TO_STUDENT_ID` |      | `true` で認証時にニックネームを学籍番号に変更                    |
+| 変数                       | 必須 | 説明                                                             |
+| -------------------------- | ---- | ---------------------------------------------------------------- |
+| `PORT`                     |      | 待受ポート (既定: 4000)                                          |
+| `APP_BASE_URL`             | 必須 | 公開URL。`https:` の場合はCookieに Secure 属性を付与             |
+| `SESSION_SECRET`           | 必須 | 連携中のCookieを暗号化するキー (32文字以上)                      |
+| `DATABASE_PATH`            |      | SQLiteファイルのパス (既定: `data/chuoauth-discord.db`)          |
+| `DISCORD_CLIENT_ID`        | 必須 | アプリケーションID                                               |
+| `DISCORD_CLIENT_SECRET`    | 必須 |                                                                  |
+| `DISCORD_BOT_TOKEN`        | 必須 |                                                                  |
+| `DISCORD_GUILD_ID`         | 必須 | 対象サーバーのID                                                 |
+| `DISCORD_VERIFIED_ROLE_ID` | 必須 | 付与するロールのID                                               |
+| `DISCORD_REDIRECT_URI`     | 必須 | `/auth/discord/callback` の完全なURL                             |
+| `CHUOAUTH_BASE_URL`        | 必須 | chuoauthのURL                                                    |
+| `CHUOAUTH_ISSUER`          |      | JWTの `iss` と照合する値 (既定: `CHUOAUTH_BASE_URL`)             |
+| `CHUOAUTH_JWKS_URL`        |      | 公開鍵の取得先 (既定: `CHUOAUTH_BASE_URL/.well-known/jwks.json`) |
+| `CHUOAUTH_REDIRECT_URI`    | 必須 | `/auth/chuoauth/callback` の完全なURL                            |
+| `CHUOAUTH_AUDIENCE`        |      | chuoauthで `TOKEN_AUDIENCE` を設定した場合に同じ値を設定         |
+| `ALLOWED_DOMAIN`           |      | 許可する大学ドメイン (既定: `g.chuo-u.ac.jp`)                    |
 
 ## 5. 実行方法
 
