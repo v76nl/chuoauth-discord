@@ -27,16 +27,13 @@ describe("createChuoauthVerifier", () => {
         await expect(verify(token)).resolves.toEqual({
             sub: "google-sub-1",
             email: "a0000000@g.chuo-u.ac.jp",
-            domain: "g.chuo-u.ac.jp",
-            student_id: "a0000000"
+            domain: "g.chuo-u.ac.jp"
         });
     });
 
-    it("student_id が null でも受け付ける", async () => {
-        const token = await signer.sign({ student_id: null });
-        await expect(verify(token)).resolves.toMatchObject({
-            student_id: null
-        });
+    it("旧バージョンの student_id クレームは取り出さない", async () => {
+        const token = await signer.sign({ student_id: "a0000000" });
+        await expect(verify(token)).resolves.not.toHaveProperty("student_id");
     });
 
     it("iss が異なれば拒否", async () => {
@@ -69,7 +66,6 @@ describe("createChuoauthVerifier", () => {
                 sub: "attacker",
                 email: "x@g.chuo-u.ac.jp",
                 domain: "g.chuo-u.ac.jp",
-                student_id: null,
                 exp: Math.floor(Date.now() / 1000) + 600
             })
         ).toString("base64url");

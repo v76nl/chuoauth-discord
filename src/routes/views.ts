@@ -174,11 +174,7 @@ export function createViews(options: { isDev: boolean; loginPath: string }) {
                         >認証を始める</a
                     >`
             ),
-        success: (input: {
-            discordUsername: string;
-            email: string;
-            nicknameUpdated: boolean;
-        }) =>
+        success: (input: { discordUsername: string; email: string }) =>
             layout(
                 "認証が完了しました",
                 html`<h1 class="ok">認証が完了しました</h1>
@@ -186,11 +182,6 @@ export function createViews(options: { isDev: boolean; loginPath: string }) {
                         ${input.discordUsername} に認証済みロールを付与しました
                         (${input.email})
                     </p>
-                    ${
-                        input.nicknameUpdated
-                            ? html`<p>ニックネームを学籍番号に変更しました</p>`
-                            : ""
-                    }
                     <p>このページを閉じてDiscordに戻ってください</p>`
             ),
         error: (kind: ErrorKind) => {

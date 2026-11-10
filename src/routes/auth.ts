@@ -111,7 +111,6 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
                     google_sub: claims.sub,
                     email: claims.email,
                     domain: claims.domain,
-                    student_id: claims.student_id,
                     discord_state: discordState
                 },
                 config.sessionSecret
@@ -150,8 +149,7 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
                 repo: deps.repo,
                 rest: deps.rest,
                 guildId: config.discord.guildId,
-                roleId: config.discord.verifiedRoleId,
-                changeNickname: config.changeNicknameToStudentId
+                roleId: config.discord.verifiedRoleId
             },
             {
                 discordUserId: discord.user.id,
@@ -159,8 +157,7 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
                 claims: {
                     sub: session.google_sub,
                     email: session.email,
-                    domain: session.domain,
-                    student_id: session.student_id
+                    domain: session.domain
                 }
             }
         );
@@ -170,8 +167,7 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
         return c.html(
             views.success({
                 discordUsername: discord.user.username,
-                email: session.email,
-                nicknameUpdated: result.nicknameUpdated
+                email: session.email
             })
         );
     });

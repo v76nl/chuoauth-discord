@@ -5,8 +5,7 @@ import type { ChuoauthClaims } from "../types/index.js";
 const claimsSchema = z.object({
     sub: z.string().min(1),
     email: z.string().min(1),
-    domain: z.string(),
-    student_id: z.string().nullable()
+    domain: z.string()
 });
 
 export class ChuoauthTokenError extends Error {

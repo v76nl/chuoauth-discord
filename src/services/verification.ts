@@ -1,8 +1,4 @@
-import {
-    addMemberWithRole,
-    setNickname,
-    type MemberRest
-} from "../bot/services/member.js";
+import { addMemberWithRole, type MemberRest } from "../bot/services/member.js";
 import type { VerifiedUserRepository } from "../db/client.js";
 import type { ChuoauthClaims, VerificationResult } from "../types/index.js";
 
@@ -11,7 +7,6 @@ export type VerificationDeps = {
     rest: MemberRest;
     guildId: string;
     roleId: string;
-    changeNickname: boolean;
     now?: () => number;
 };
 
@@ -41,7 +36,6 @@ export async function completeVerification(
         discord_user_id: input.discordUserId,
         google_sub: claims.sub,
         email: claims.email,
-        student_id: claims.student_id,
         verified_at: Math.floor((deps.now?.() ?? Date.now()) / 1000),
         guild_id: deps.guildId
     });
@@ -68,13 +62,5 @@ export async function completeVerification(
         return { ok: false, reason: "role_grant_failed" };
     }
 
-    let nicknameUpdated = false;
-    if (deps.changeNickname && claims.student_id) {
-        nicknameUpdated = await setNickname(deps.rest, {
-            guildId: deps.guildId,
-            userId: input.discordUserId,
-            nickname: claims.student_id
-        });
-    }
-    return { ok: true, nicknameUpdated };
+    return { ok: true };
 }

@@ -3,7 +3,6 @@ export type ChuoauthClaims = {
     sub: string;
     email: string;
     domain: string;
-    student_id: string | null;
 };
 
 export type DiscordUser = {
@@ -17,5 +16,4 @@ export type VerificationFailureReason =
     | "role_grant_failed";
 
 export type VerificationResult =
-    | { ok: true; nicknameUpdated: boolean }
-    | { ok: false; reason: VerificationFailureReason };
+    { ok: true } | { ok: false; reason: VerificationFailureReason };

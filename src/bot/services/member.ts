@@ -1,6 +1,6 @@
 import { Routes, type REST } from "discord.js";
 
-export type MemberRest = Pick<REST, "put" | "patch">;
+export type MemberRest = Pick<REST, "put">;
 
 const AUDIT_LOG_REASON = "chuoauth: 大学アカウント認証";
 
@@ -26,24 +26,4 @@ export async function addMemberWithRole(
         Routes.guildMemberRole(options.guildId, options.userId, options.roleId),
         { reason: AUDIT_LOG_REASON }
     );
-}
-
-/**
- * ニックネームを変更する。サーバー所有者やBotより上位ロールのメンバーは変更できないため、
- * 失敗しても認証自体は成功扱いとし false を返す
- */
-export async function setNickname(
-    rest: MemberRest,
-    options: { guildId: string; userId: string; nickname: string }
-): Promise<boolean> {
-    try {
-        await rest.patch(Routes.guildMember(options.guildId, options.userId), {
-            body: { nick: options.nickname },
-            reason: AUDIT_LOG_REASON
-        });
-        return true;
-    } catch (err) {
-        console.warn("Failed to update nickname", err);
-        return false;
-    }
 }

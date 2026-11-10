@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import Database from "better-sqlite3";
 import { Routes } from "discord.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { openDatabase, type VerifiedUserRepository } from "../src/db/client.js";
@@ -16,8 +20,7 @@ const BOB = "300000000000000004";
 const claims: ChuoauthClaims = {
     sub: "google-sub-1",
     email: "a0000000@g.chuo-u.ac.jp",
-    domain: "g.chuo-u.ac.jp",
-    student_id: "a0000000"
+    domain: "g.chuo-u.ac.jp"
 };
 
 let repo: VerifiedUserRepository;
@@ -32,7 +35,6 @@ beforeEach(() => {
         rest: asRest(rest),
         guildId: GUILD,
         roleId: ROLE,
-        changeNickname: false,
         now: () => 1_800_000_000_000
     };
 });
@@ -46,10 +48,7 @@ const verify = (discordUserId: string, c: ChuoauthClaims = claims) =>
 
 describe("completeVerification", () => {
     it("ギルドへの追加とロール付与を行い、記録する", async () => {
-        await expect(verify(ALICE)).resolves.toEqual({
-            ok: true,
-            nicknameUpdated: false
-        });
+        await expect(verify(ALICE)).resolves.toEqual({ ok: true });
         expect(rest.put).toHaveBeenCalledWith(
             Routes.guildMember(GUILD, ALICE),
             {
@@ -61,47 +60,14 @@ describe("completeVerification", () => {
             Routes.guildMemberRole(GUILD, ALICE, ROLE),
             expect.anything()
         );
-        expect(rest.patch).not.toHaveBeenCalled();
         expect(repo.findByDiscordUserId(ALICE)).toEqual({
             id: 1,
             discord_user_id: ALICE,
             google_sub: "google-sub-1",
             email: "a0000000@g.chuo-u.ac.jp",
-            student_id: "a0000000",
             verified_at: 1_800_000_000,
             guild_id: GUILD
         });
-    });
-
-    it("設定が有効ならニックネームを学籍番号に変更する", async () => {
-        deps.changeNickname = true;
-        await expect(verify(ALICE)).resolves.toEqual({
-            ok: true,
-            nicknameUpdated: true
-        });
-        expect(rest.patch).toHaveBeenCalledWith(
-            Routes.guildMember(GUILD, ALICE),
-            {
-                body: { nick: "a0000000" },
-                reason: expect.any(String)
-            }
-        );
-    });
-
-    it("学籍番号がなければニックネームは変更しない", async () => {
-        deps.changeNickname = true;
-        await verify(ALICE, { ...claims, student_id: null });
-        expect(rest.patch).not.toHaveBeenCalled();
-    });
-
-    it("ニックネーム変更に失敗しても認証は成功扱い", async () => {
-        deps.changeNickname = true;
-        rest.patch.mockRejectedValueOnce(new Error("Missing Permissions"));
-        await expect(verify(ALICE)).resolves.toEqual({
-            ok: true,
-            nicknameUpdated: false
-        });
-        expect(repo.findByDiscordUserId(ALICE)).toBeDefined();
     });
 
     it("認証済みのDiscordアカウントは拒否し、既存の記録を上書きしない", async () => {
@@ -163,7 +129,6 @@ describe("openDatabase", () => {
             discord_user_id: ALICE,
             google_sub: "sub",
             email: "a@g.chuo-u.ac.jp",
-            student_id: null,
             verified_at: 0,
             guild_id: GUILD
         };
@@ -176,5 +141,41 @@ describe("openDatabase", () => {
             ok: false,
             conflict: "google_sub"
         });
+    });
+
+    it("旧スキーマの student_id 列を値ごと削除し、他の記録は残す", () => {
+        const dir = mkdtempSync(join(tmpdir(), "chuoauth-discord-"));
+        const path = join(dir, "legacy.db");
+        try {
+            const legacy = new Database(path);
+            legacy.exec(`CREATE TABLE verified_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_user_id TEXT NOT NULL UNIQUE,
+                google_sub TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL,
+                student_id TEXT,
+                verified_at INTEGER NOT NULL,
+                guild_id TEXT NOT NULL
+            )`);
+            legacy
+                .prepare(
+                    "INSERT INTO verified_users (discord_user_id, google_sub, email, student_id, verified_at, guild_id) VALUES (?, ?, ?, ?, ?, ?)"
+                )
+                .run(ALICE, "sub", "a@g.chuo-u.ac.jp", "a0000000", 0, GUILD);
+            legacy.close();
+
+            const migrated = openDatabase(path);
+            expect(migrated.findByDiscordUserId(ALICE)).toEqual({
+                id: 1,
+                discord_user_id: ALICE,
+                google_sub: "sub",
+                email: "a@g.chuo-u.ac.jp",
+                verified_at: 0,
+                guild_id: GUILD
+            });
+            migrated.close();
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
     });
 });

@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import Database from "better-sqlite3";
 import {
     CREATE_VERIFIED_USERS,
+    REMOVED_COLUMNS,
     type NewVerifiedUser,
     type VerifiedUserRow
 } from "./schema.js";
@@ -28,6 +29,7 @@ export function openDatabase(path: string): VerifiedUserRepository {
     const db = new Database(path);
     db.pragma("journal_mode = WAL");
     db.exec(CREATE_VERIFIED_USERS);
+    dropRemovedColumns(db);
 
     const byDiscord = db.prepare<[string], VerifiedUserRow>(
         "SELECT * FROM verified_users WHERE discord_user_id = ?"
@@ -37,9 +39,9 @@ export function openDatabase(path: string): VerifiedUserRepository {
     );
     const insertStmt = db.prepare<[NewVerifiedUser]>(
         `INSERT INTO verified_users
-            (discord_user_id, google_sub, email, student_id, verified_at, guild_id)
+            (discord_user_id, google_sub, email, verified_at, guild_id)
          VALUES
-            (@discord_user_id, @google_sub, @email, @student_id, @verified_at, @guild_id)`
+            (@discord_user_id, @google_sub, @email, @verified_at, @guild_id)`
     );
     const deleteStmt = db.prepare<[string]>(
         "DELETE FROM verified_users WHERE discord_user_id = ?"
@@ -73,4 +75,20 @@ export function openDatabase(path: string): VerifiedUserRepository {
         },
         close: () => db.close()
     };
+}
+
+function dropRemovedColumns(db: Database.Database): void {
+    const columns = new Set(
+        db
+            .prepare<[], { name: string }>(
+                "SELECT name FROM pragma_table_info('verified_users')"
+            )
+            .all()
+            .map((column) => column.name)
+    );
+    for (const column of REMOVED_COLUMNS) {
+        if (columns.has(column)) {
+            db.exec(`ALTER TABLE verified_users DROP COLUMN ${column}`);
+        }
+    }
 }
