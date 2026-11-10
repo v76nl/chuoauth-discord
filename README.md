@@ -171,7 +171,6 @@ docker run --env-file .env -p 4000:4000 -v chuoauth-discord-data:/app/data chuoa
 | `discord_user_id` | DiscordユーザーID (UNIQUE)        |
 | `google_sub`      | Googleアカウントの固有ID (UNIQUE) |
 | `email`           | 大学メールアドレス                |
-| `student_id`      | 学籍番号 (教職員などは NULL)      |
 | `verified_at`     | 認証日時 (UNIX秒)                 |
 | `guild_id`        | ロールを付与したサーバーID        |
 
@@ -183,3 +182,4 @@ docker run --env-file .env -p 4000:4000 -v chuoauth-discord-data:/app/data chuoa
 - JWTは `iss`、`exp`、RS256署名、`domain` を検証する。公開鍵は jose がキャッシュし、未知の `kid` が来たときだけ再取得する
 - 先にDBへ記録して UNIQUE 制約で同時リクエストによる二重登録を防ぎ、ロール付与に失敗した場合は記録を取り消して再試行できるようにしている
 - アクセスログにはクエリ文字列 (認可コードやJWT) を出力しない
+- 学籍番号は受け取らず、保存もしない。旧バージョンで作成したDBの `student_id` 列は起動時に値ごと削除する
