@@ -3,7 +3,6 @@ export type ChuoauthClaims = {
     sub: string;
     email: string;
     domain: string;
-    student_id: string | null;
 };
 
 export type DiscordUser = {

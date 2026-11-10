@@ -8,12 +8,11 @@ export const startStateSchema = z.object({
 });
 
 // 大学アカウントの検証後からDiscordコールバックまで保持する情報。
-// 学籍番号やメールアドレスを含むため、署名だけでなく暗号化して保持する
+// メールアドレスを含むため、署名だけでなく暗号化して保持する
 export const linkSessionSchema = z.object({
     google_sub: z.string(),
     email: z.string(),
     domain: z.string(),
-    student_id: z.string().nullable(),
     discord_state: z.string()
 });
 

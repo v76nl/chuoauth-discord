@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import Database from "better-sqlite3";
 import { Routes } from "discord.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { openDatabase, type VerifiedUserRepository } from "../src/db/client.js";
@@ -16,8 +20,7 @@ const BOB = "300000000000000004";
 const claims: ChuoauthClaims = {
     sub: "google-sub-1",
     email: "a0000000@g.chuo-u.ac.jp",
-    domain: "g.chuo-u.ac.jp",
-    student_id: "a0000000"
+    domain: "g.chuo-u.ac.jp"
 };
 
 let repo: VerifiedUserRepository;
@@ -62,7 +65,6 @@ describe("completeVerification", () => {
             discord_user_id: ALICE,
             google_sub: "google-sub-1",
             email: "a0000000@g.chuo-u.ac.jp",
-            student_id: "a0000000",
             verified_at: 1_800_000_000,
             guild_id: GUILD
         });
@@ -127,7 +129,6 @@ describe("openDatabase", () => {
             discord_user_id: ALICE,
             google_sub: "sub",
             email: "a@g.chuo-u.ac.jp",
-            student_id: null,
             verified_at: 0,
             guild_id: GUILD
         };
@@ -140,5 +141,41 @@ describe("openDatabase", () => {
             ok: false,
             conflict: "google_sub"
         });
+    });
+
+    it("旧スキーマの student_id 列を値ごと削除し、他の記録は残す", () => {
+        const dir = mkdtempSync(join(tmpdir(), "chuoauth-discord-"));
+        const path = join(dir, "legacy.db");
+        try {
+            const legacy = new Database(path);
+            legacy.exec(`CREATE TABLE verified_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_user_id TEXT NOT NULL UNIQUE,
+                google_sub TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL,
+                student_id TEXT,
+                verified_at INTEGER NOT NULL,
+                guild_id TEXT NOT NULL
+            )`);
+            legacy
+                .prepare(
+                    "INSERT INTO verified_users (discord_user_id, google_sub, email, student_id, verified_at, guild_id) VALUES (?, ?, ?, ?, ?, ?)"
+                )
+                .run(ALICE, "sub", "a@g.chuo-u.ac.jp", "a0000000", 0, GUILD);
+            legacy.close();
+
+            const migrated = openDatabase(path);
+            expect(migrated.findByDiscordUserId(ALICE)).toEqual({
+                id: 1,
+                discord_user_id: ALICE,
+                google_sub: "sub",
+                email: "a@g.chuo-u.ac.jp",
+                verified_at: 0,
+                guild_id: GUILD
+            });
+            migrated.close();
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
     });
 });

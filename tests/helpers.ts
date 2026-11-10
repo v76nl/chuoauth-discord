@@ -31,7 +31,6 @@ export async function createSigner(): Promise<Signer> {
             new SignJWT({
                 email: "a0000000@g.chuo-u.ac.jp",
                 domain: "g.chuo-u.ac.jp",
-                student_id: "a0000000",
                 ...claims
             })
                 .setProtectedHeader({ alg: "RS256", typ: "JWT", kid: KID })

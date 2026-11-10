@@ -43,7 +43,7 @@ export async function handleSetupCommand(
                 "このサーバーは中央大学の学生向けです。",
                 "下のボタンから、中央大学のGoogleアカウント (g.chuo-u.ac.jp) で認証すると認証済みロールが付与されます。",
                 "",
-                "記録されるのはDiscordのユーザーID、Googleアカウントの識別子、メールアドレス、学籍番号です。"
+                "記録されるのはDiscordのユーザーID、Googleアカウントの識別子、メールアドレスです。"
             ].join("\n")
         )
         .setColor(0x5865f2);

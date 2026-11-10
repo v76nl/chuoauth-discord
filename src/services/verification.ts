@@ -36,7 +36,6 @@ export async function completeVerification(
         discord_user_id: input.discordUserId,
         google_sub: claims.sub,
         email: claims.email,
-        student_id: claims.student_id,
         verified_at: Math.floor((deps.now?.() ?? Date.now()) / 1000),
         guild_id: deps.guildId
     });

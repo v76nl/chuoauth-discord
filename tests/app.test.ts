@@ -133,8 +133,7 @@ describe("連携フロー", () => {
             })
         );
         expect(repo.findByDiscordUserId(ALICE)).toMatchObject({
-            google_sub: "google-sub-1",
-            student_id: "a0000000"
+            google_sub: "google-sub-1"
         });
     });
 
@@ -158,8 +157,7 @@ describe("連携フロー", () => {
         const other = await verifyUniversity(
             await signer.sign({
                 sub: "google-sub-2",
-                email: "b0000000@g.chuo-u.ac.jp",
-                student_id: "b0000000"
+                email: "b0000000@g.chuo-u.ac.jp"
             })
         );
         const res = await linkDiscord(other, ALICE);

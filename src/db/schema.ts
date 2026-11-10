@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS verified_users (
     discord_user_id TEXT NOT NULL UNIQUE,
     google_sub TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL,
-    student_id TEXT,
     verified_at INTEGER NOT NULL,
     guild_id TEXT NOT NULL
 )`;
@@ -14,9 +13,11 @@ export type VerifiedUserRow = {
     discord_user_id: string;
     google_sub: string;
     email: string;
-    student_id: string | null;
     verified_at: number;
     guild_id: string;
 };
 
 export type NewVerifiedUser = Omit<VerifiedUserRow, "id">;
+
+// 旧バージョンで作成したDBに残る列。保存済みの値ごと削除する
+export const REMOVED_COLUMNS = ["student_id"] as const;

@@ -111,7 +111,6 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
                     google_sub: claims.sub,
                     email: claims.email,
                     domain: claims.domain,
-                    student_id: claims.student_id,
                     discord_state: discordState
                 },
                 config.sessionSecret
@@ -158,8 +157,7 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
                 claims: {
                     sub: session.google_sub,
                     email: session.email,
-                    domain: session.domain,
-                    student_id: session.student_id
+                    domain: session.domain
                 }
             }
         );
