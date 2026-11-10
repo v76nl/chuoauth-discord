@@ -150,8 +150,7 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
                 repo: deps.repo,
                 rest: deps.rest,
                 guildId: config.discord.guildId,
-                roleId: config.discord.verifiedRoleId,
-                changeNickname: config.changeNicknameToStudentId
+                roleId: config.discord.verifiedRoleId
             },
             {
                 discordUserId: discord.user.id,
@@ -170,8 +169,7 @@ export function authRoutes(deps: AppDeps, views: Views): Hono {
         return c.html(
             views.success({
                 discordUsername: discord.user.username,
-                email: session.email,
-                nicknameUpdated: result.nicknameUpdated
+                email: session.email
             })
         );
     });

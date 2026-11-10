@@ -47,8 +47,7 @@ export async function createSigner(): Promise<Signer> {
 
 export function createFakeRest() {
     return {
-        put: vi.fn(async () => undefined),
-        patch: vi.fn(async () => undefined)
+        put: vi.fn(async () => undefined)
     } satisfies Record<keyof MemberRest, unknown>;
 }
 

@@ -4,11 +4,6 @@ const snowflake = z
     .string()
     .regex(/^\d{17,20}$/, "Discord ID must be a snowflake");
 
-const booleanFlag = z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((value) => value === "true");
-
 const envSchema = z.object({
     PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     NODE_ENV: z
@@ -28,8 +23,7 @@ const envSchema = z.object({
     CHUOAUTH_JWKS_URL: z.url().optional(),
     CHUOAUTH_REDIRECT_URI: z.url(),
     CHUOAUTH_AUDIENCE: z.string().min(1).optional(),
-    ALLOWED_DOMAIN: z.string().min(1).default("g.chuo-u.ac.jp"),
-    CHANGE_NICKNAME_TO_STUDENT_ID: booleanFlag
+    ALLOWED_DOMAIN: z.string().min(1).default("g.chuo-u.ac.jp")
 });
 
 export type Config = {
@@ -54,7 +48,6 @@ export type Config = {
         audience?: string;
         allowedDomain: string;
     };
-    changeNicknameToStudentId: boolean;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -92,7 +85,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
             redirectUri: e.CHUOAUTH_REDIRECT_URI,
             audience: e.CHUOAUTH_AUDIENCE,
             allowedDomain: e.ALLOWED_DOMAIN
-        },
-        changeNicknameToStudentId: e.CHANGE_NICKNAME_TO_STUDENT_ID
+        }
     };
 }

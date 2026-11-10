@@ -32,7 +32,6 @@ beforeEach(() => {
         rest: asRest(rest),
         guildId: GUILD,
         roleId: ROLE,
-        changeNickname: false,
         now: () => 1_800_000_000_000
     };
 });
@@ -46,10 +45,7 @@ const verify = (discordUserId: string, c: ChuoauthClaims = claims) =>
 
 describe("completeVerification", () => {
     it("ギルドへの追加とロール付与を行い、記録する", async () => {
-        await expect(verify(ALICE)).resolves.toEqual({
-            ok: true,
-            nicknameUpdated: false
-        });
+        await expect(verify(ALICE)).resolves.toEqual({ ok: true });
         expect(rest.put).toHaveBeenCalledWith(
             Routes.guildMember(GUILD, ALICE),
             {
@@ -61,7 +57,6 @@ describe("completeVerification", () => {
             Routes.guildMemberRole(GUILD, ALICE, ROLE),
             expect.anything()
         );
-        expect(rest.patch).not.toHaveBeenCalled();
         expect(repo.findByDiscordUserId(ALICE)).toEqual({
             id: 1,
             discord_user_id: ALICE,
@@ -71,37 +66,6 @@ describe("completeVerification", () => {
             verified_at: 1_800_000_000,
             guild_id: GUILD
         });
-    });
-
-    it("設定が有効ならニックネームを学籍番号に変更する", async () => {
-        deps.changeNickname = true;
-        await expect(verify(ALICE)).resolves.toEqual({
-            ok: true,
-            nicknameUpdated: true
-        });
-        expect(rest.patch).toHaveBeenCalledWith(
-            Routes.guildMember(GUILD, ALICE),
-            {
-                body: { nick: "a0000000" },
-                reason: expect.any(String)
-            }
-        );
-    });
-
-    it("学籍番号がなければニックネームは変更しない", async () => {
-        deps.changeNickname = true;
-        await verify(ALICE, { ...claims, student_id: null });
-        expect(rest.patch).not.toHaveBeenCalled();
-    });
-
-    it("ニックネーム変更に失敗しても認証は成功扱い", async () => {
-        deps.changeNickname = true;
-        rest.patch.mockRejectedValueOnce(new Error("Missing Permissions"));
-        await expect(verify(ALICE)).resolves.toEqual({
-            ok: true,
-            nicknameUpdated: false
-        });
-        expect(repo.findByDiscordUserId(ALICE)).toBeDefined();
     });
 
     it("認証済みのDiscordアカウントは拒否し、既存の記録を上書きしない", async () => {
